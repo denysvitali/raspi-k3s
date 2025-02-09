@@ -16,6 +16,17 @@ cp .env.example .env
 
 Edit the `.env` file and fill in the necessary values - you probably only need to change the `WIFI_SSID` and `WIFI_PSK`.
 
+
+## Setting up the authorized keys
+
+Copy your public key(s) to the `authorized_keys` file:
+
+```
+ssh-add -L > input/config/authorized_keys
+```
+
+## Building the image
+
 Then, run the following command:
 
 ```bash
