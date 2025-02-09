@@ -8,6 +8,12 @@ This repository contains the necessary files to deploy the K3S master node on a 
 
 ## Usage
 
+Copy the `.env.example` file to `.env`:
+
+```bash
+cp .env.example .env
+```
+
 Edit the `.env` file and fill in the necessary values - you probably only need to change the `WIFI_SSID` and `WIFI_PSK`.
 
 Then, run the following command:
