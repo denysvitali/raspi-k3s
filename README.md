@@ -5,6 +5,7 @@ Deploy K3S master node on a Raspberry Pi 4 with automated setup and WiFi configu
 ## Overview
 
 This project provides automation scripts and configuration files to easily deploy a K3S master node on Raspberry Pi 4 hardware.
+The setup follows an A/B partition scheme (thanks to raspi-alpine/builder) to allow for easy updates and rollbacks.
 
 ## Prerequisites
 
@@ -39,13 +40,12 @@ To update an existing installation:
 
 1. Transfer update image:
     ```bash
-    scp sdcard_update.img.gz sdcard_update.img.gz.sha256 root@your-device:/tmp
+    scp output/sdcard_update.img.gz output/sdcard_update.img.gz.sha256 root@master:/tmp
     ```
 
 2. Apply update on device:
     ```bash
-    ab_flash /tmp/sdcard_update.img.gz
-    reboot
+    ab_flash /tmp/sdcard_update.img.gz && reboot
     ```
 
 ## Security Notes
