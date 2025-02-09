@@ -1,49 +1,60 @@
 # raspi-k3s
 
-This repository contains the necessary files to deploy the K3S master node on a Raspberry Pi 4.
+Deploy K3S master node on a Raspberry Pi 4 with automated setup and WiFi configuration.
+
+## Overview
+
+This project provides automation scripts and configuration files to easily deploy a K3S master node on Raspberry Pi 4 hardware.
 
 ## Prerequisites
 
-- [raspi-alpine/builder](https://gitlab.com/raspi-alpine/builder/) (until they release the newest Docker image)
+- Raspberry Pi 4 (any RAM size)
+- SD card (min 8GB recommended, but at least `SIZE_ROOT_PART * 2 + SIZE_DATA`)
+- [raspi-alpine/builder](https://gitlab.com/raspi-alpine/builder/) dependency
 
-## Usage
+## Quick Start
 
-Copy the `.env.example` file to `.env`:
+1. Clone this repository
+2. Configure environment:
+    ```bash
+    cp .env.example .env
+    ```
+    Edit `.env` to set your WiFi credentials (`WIFI_SSID` and `WIFI_PSK`)
 
-```bash
-cp .env.example .env
-```
+3. Add SSH keys:
+    ```bash
+    ssh-add -L > input/config/authorized_keys
+    ```
 
-Edit the `.env` file and fill in the necessary values - you probably only need to change the `WIFI_SSID` and `WIFI_PSK`.
+4. Build image:
+    ```bash
+    ./build_image.sh
+    ```
 
+5. Flash the resulting `output/sdcard.img` to your SD card
 
-## Setting up the authorized keys
+## Updating the System
 
-Copy your public key(s) to the `authorized_keys` file:
+To update an existing installation:
 
-```
-ssh-add -L > input/config/authorized_keys
-```
+1. Transfer update image:
+    ```bash
+    scp sdcard_update.img.gz sdcard_update.img.gz.sha256 root@your-device:/tmp
+    ```
 
-## Building the image
+2. Apply update on device:
+    ```bash
+    ab_flash /tmp/sdcard_update.img.gz
+    reboot
+    ```
 
-Then, run the following command:
+## Security Notes
 
-```bash
-./build_image.sh
-```
+- Always change default passwords
+- Use SSH keys for authentication
+- Update the system regularly (re-build the image and apply the update)
 
-Your image will be available in the `output` directory. Flash the `sdcard.img` on an SD card and boot your Raspberry Pi 4.
+## Support
 
-## Flashing upgrades
+For issues and feature requests, please use the GitHub issue tracker.
 
-```bash
-scp sdcard_update.img.gz sdcard_update.img.gz.sha256 root@your-device:/tmp
-```
-
-Then on your device:
-
-```bash
-# ab_flash /tmp/sdcard_update.img.gz
-# reboot
-```
