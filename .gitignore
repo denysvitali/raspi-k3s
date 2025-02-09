@@ -1,3 +1,4 @@
 .env
 /output
 build_cache
+/input/config/authorized_keys
