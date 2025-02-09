@@ -14,3 +14,7 @@ echo "@edge-community http://dl-cdn.alpinelinux.org/alpine/edge/community" >> ${
 
 
 chroot_exec apk add k3s@edge-community
+chroot_exec rc-update add k3s default
+chroot_exec rc-update add dropbear default
+
+mkdir -p "${ROOTFS_PATH}"/etc/dropbear
