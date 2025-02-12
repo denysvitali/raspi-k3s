@@ -13,9 +13,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Make build script executable
-        run: chmod +x build_image.sh
-
       - name: Run build script
         run: ./build_image.sh
 
