@@ -27,7 +27,7 @@ jobs:
 
       - name: Create tag
         id: create-tag
-        run: echo "RELEASE_TAG=v$(date +'%Y-%m-%d')-${GITHUB_SHA:0:5}" >> "$GITHUB_ENV"
+        run: echo "RELEASE_TAG=v$(date +'%Y-%m-%d')-${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
 
       - name: Create GitHub Release
         id: create_release
@@ -43,7 +43,7 @@ jobs:
       - name: Upload release assets
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ steps.create_release.outputs.tag_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
           files: |
             output/sdcard.img.gz
             output/sdcard.img.gz.sha256
