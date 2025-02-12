@@ -45,7 +45,6 @@ jobs:
         with:
           tag_name: ${{ steps.create_release.outputs.tag_name }}
           files: |
-            output/sdcard.img
             output/sdcard.img.gz
             output/sdcard.img.gz.sha256
             output/sdcard_update.img.gz
