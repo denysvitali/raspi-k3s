@@ -25,13 +25,16 @@ jobs:
       - name: Run build script
         run: ./build_image.sh
 
+      - name: Create tag
+        id: create-tag
+        run: echo "RELEASE_TAG=v$(date +'%Y-%m-%d %H:%M:%S')" >> "$GITHUB_ENV"
+
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          # Create a unique tag using the current date and time
-          tag_name: "v$(date +'%Y%m%d%H%M%S')"
-          name: "Release $(date +'%Y-%m-%d %H:%M:%S')"
+          tag_name: "${{ steps.create-tag.outputs.RELEASE_TAG }}"
+          name: "Release ${{ steps.create-tag.outputs.RELEASE_TAG }}"
           draft: false
           prerelease: false
         env:
