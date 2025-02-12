@@ -16,6 +16,9 @@ jobs:
       - name: Copy env
         run: cp .env.example .env
 
+      - name: Get SSH keys from GitHub
+        run: wget https://github.com/{{ env.GITHUB_REPOSITORY_OWNER }}.keys -O ./input/config/authorized_keys
+
       - name: Run build script
         run: ./build_image.sh
 
