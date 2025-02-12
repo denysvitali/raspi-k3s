@@ -13,6 +13,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Copy env
+        run: cp .env.example .env
+
       - name: Run build script
         run: ./build_image.sh
 
