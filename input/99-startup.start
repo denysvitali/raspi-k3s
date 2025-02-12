@@ -1,5 +1,8 @@
 #!/bin/sh
 
+mount -o ro /dev/root /mnt
 mkdir -p /root/.ssh/
 cp /etc/ssh/authorized_keys /root/.ssh/authorized_keys
+cp /mnt/etc/dropbear/dropbear.conf /etc/dropbear/dropbear.conf
 chmod 600 /root/.ssh/authorized_keys
+umount /mnt
