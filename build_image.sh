@@ -8,7 +8,6 @@ fi
 
 docker run \
   --rm \
-  -it \
   -v "$PWD"/input:/input \
   -v "$PWD"/output:/output \
   --env-file .env \
