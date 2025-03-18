@@ -12,6 +12,7 @@ chroot_exec apk add \
   k3s@edge-community \
   openssh-sftp-server \
   tailscale \
+  python3 \
   vim
 
 chroot_exec rc-update add k3s default

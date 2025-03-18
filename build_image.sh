@@ -1,5 +1,5 @@
 #!/bin/sh
-DOCKER_IMAGE=${1:-registry.gitlab.com/raspi-alpine/builder/3-21:latest}
+DOCKER_IMAGE=${1:-registry.gitlab.com/raspi-alpine/builder/master:latest}
 
 if [ "$DOCKER_IMAGE" = "" ]; then
   echo "Usage: $0 <docker_image>"
