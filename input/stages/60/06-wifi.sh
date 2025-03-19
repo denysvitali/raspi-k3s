@@ -1,5 +1,10 @@
 #!/bin/sh
 
+if [ "$WIFI_ENABLED" != "true" ]; then
+  echo "=== WIFI IS DISABLED - SKIPPING ==="
+  return
+fi
+
 # wifi stuff
 chroot_exec apk add wireless-tools iwd dbus openresolv
 chroot_exec rc-update add iwd default
