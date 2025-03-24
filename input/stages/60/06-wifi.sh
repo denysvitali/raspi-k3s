@@ -39,3 +39,5 @@ EOF
 cat >> "$ROOTFS_PATH"/etc/modprobe.d/wifi.conf <<EOF
 options brcmfmac feature_disable=0x82000
 EOF
+
+echo "=== WIFI SETUP COMPLETE ==="
