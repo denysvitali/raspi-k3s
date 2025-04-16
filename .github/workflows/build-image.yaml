@@ -31,6 +31,18 @@ jobs:
       - name: Create tag
         id: create-tag
         run: echo "RELEASE_TAG=v$(date +'%Y-%m-%d')-${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
+        
+      - name: Get version information
+        id: get-versions
+        run: |
+          if [ -f output/versions.txt ]; then
+            VERSIONS_CONTENT=$(cat output/versions.txt)
+            echo "versions_content<<EOF" >> $GITHUB_ENV
+            echo "$VERSIONS_CONTENT" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          else
+            echo "versions_content=Version information not available" >> $GITHUB_ENV
+          fi
 
       - name: Create GitHub Release
         id: create_release
@@ -38,6 +50,10 @@ jobs:
         with:
           tag_name: "${{ env.RELEASE_TAG }}"
           name: "Release ${{ env.RELEASE_TAG }}"
+          body: |
+            ## Versions
+            
+            ${{ env.versions_content }}
           draft: false
           prerelease: false
         env:
