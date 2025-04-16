@@ -17,8 +17,8 @@ append_section() {
 
 # System Information section
 append_section "System Information"
-append_section "$(chroot_exec cat /etc/alpine-release 2>&1)"
-add_to_v "$(uname -a >> "$VERSIONS_FILE" 2>&1)"
+add_to_v "Alpine $(chroot_exec cat /etc/alpine-release 2>&1)"
+add_to_v "$(uname -a 2>&1)"
 
 # K3s Information section
 append_section "K3s Information"
@@ -26,7 +26,10 @@ add_to_v "$(chroot_exec k3s --version 2>&1)"
 
 # Package Versions section
 append_section "Package Versions"
-add_to_v "$(chroot_exec apk list -I | awk '{print $1}')"
+# Fix: Iterate through packages one by one to properly capture all packages
+chroot_exec apk list -I | while read -r pkg; do
+    add_to_v "$pkg"
+done
 
 # Network Configuration section
 append_section "Network Configuration"
