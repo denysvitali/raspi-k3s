@@ -26,8 +26,7 @@ add_to_v "$(chroot_exec k3s --version 2>&1)"
 
 # Package Versions section
 append_section "Package Versions"
-# Fix: Iterate through packages one by one to properly capture all packages
-chroot_exec apk list -I | while read -r pkg; do
+chroot_exec apk list -I 2>&1 | while read -r pkg; do
     add_to_v "$pkg"
 done
 
