@@ -27,7 +27,7 @@ add_to_v "$(chroot_exec k3s --version 2>&1)"
 # Package Versions section
 append_section "Package Versions"
 chroot_exec apk list -I 2>&1 | while read -r pkg; do
-    add_to_v "- \`$(echo $pkg | awk '{print $1}')\`"
+    add_to_v "- \`$(echo "$pkg" | awk '{print $1}')\`"
 done
 
 # Network Configuration section
