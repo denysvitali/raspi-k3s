@@ -11,14 +11,9 @@ append_to_versions() {
 # Helper function to append section header to versions file
 append_section() {
     append_to_versions ""
-    append_to_versions "## $1"
+    append_to_versions "### $1"
 }
 
-# Create the file with header information
-cat > "$VERSIONS_FILE" << EOF
-# Raspberry Pi K3s Image - Build Information
-Generated: $(date +'%Y-%m-%d %H:%M:%S')
-EOF
 
 # System Information section
 append_section "System Information"
@@ -43,3 +38,4 @@ fi
 
 # Print message that versions file is ready
 echo "Version information generated at $VERSIONS_FILE"
+cat "$VERSIONS_FILE"
