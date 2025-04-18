@@ -1,0 +1,74 @@
+#!/sbin/openrc-run
+
+description="Detect and mount SSD for k3s storage"
+depend() {
+    need localmount
+    before k3s
+}
+
+start() {
+    ebegin "Detecting and mounting SSD for k3s"
+    
+    # Auto-detect and mount SSD
+    mkdir -p /mnt/ssd
+    DETECTED_SSD=""
+
+    # Look for potential SSDs (sda is typically the first SATA/USB drive)
+    for ssd in /dev/sd*1; do
+        if [ -b "$ssd" ]; then
+            # Check if it's a valid block device and not already mounted
+            if ! mount | grep -q "$ssd"; then
+                # Try temporary mount to check for marker file
+                if mount "$ssd" /mnt/ssd; then
+                    # Only use this SSD if it contains the marker file
+                    if [ -f "/mnt/ssd/.ssd" ]; then
+                        echo "Valid SSD detected and mounted at /mnt/ssd: $ssd"
+                        DETECTED_SSD="$ssd"
+                        
+                        # Create required directories on SSD
+                        mkdir -p /mnt/ssd/var/lib
+                        
+                        # If this is the first boot with this SSD, migrate existing data
+                        if [ ! -d "/mnt/ssd/var/lib/rancher" ] && [ -d "/var/lib/rancher" ]; then
+                            echo "Migrating existing data to SSD..."
+                            mkdir -p /mnt/ssd/var/lib/rancher
+                            cp -a /var/lib/rancher/* /mnt/ssd/var/lib/rancher/ 2>/dev/null || true
+                        fi
+                        
+                        # Symlink or bind mount to use SSD for /var/lib
+                        if [ -d "/mnt/ssd/var/lib" ]; then
+                            # Unbind the current /var/lib binding if it exists
+                            mount | grep "/var/lib" | grep "bind" && umount /var/lib
+                            # Bind mount from SSD
+                            mount --bind /mnt/ssd/var/lib /var/lib
+                            echo "Using SSD for /var/lib"
+                        fi
+                        
+                        break
+                    else
+                        echo "SSD found but missing .ssd marker file. Skipping: $ssd"
+                        # Unmount the SSD as we're not using it
+                        umount /mnt/ssd
+                    fi
+                fi
+            fi
+        fi
+    done
+
+    # If no valid SSD was detected
+    if [ -z "$DETECTED_SSD" ]; then
+        echo "No valid SSD detected, using default storage"
+        # Make sure the original bind mount for /var/lib is in place
+        if ! mount | grep -q "/var/lib.*bind"; then
+            mount --bind /data/var/lib /var/lib
+        fi
+    fi
+    
+    eend 0
+    return 0
+}
+
+stop() {
+    # Nothing to do on stop
+    return 0
+}

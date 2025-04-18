@@ -1,0 +1,48 @@
+#!/bin/sh
+# Script to prepare an SSD for use with the k3s cluster
+
+if [ -z "$1" ]; then
+    echo "Usage: $0 <device>"
+    echo "Example: $0 /dev/sda1"
+    exit 1
+fi
+
+SSD_DEVICE=$1
+
+# Check if the device exists
+if [ ! -b "$SSD_DEVICE" ]; then
+    echo "Error: $SSD_DEVICE is not a valid block device"
+    exit 1
+fi
+
+# Create a temporary mount point
+TEMP_MOUNT="/tmp/ssd-prep"
+mkdir -p "$TEMP_MOUNT"
+
+# Format the SSD as ext4
+echo "Formatting $SSD_DEVICE as ext4..."
+mkfs.ext4 -F "$SSD_DEVICE"
+
+# Mount the SSD
+if ! mount "$SSD_DEVICE" "$TEMP_MOUNT"; then
+    echo "Error: Failed to mount $SSD_DEVICE"
+    rmdir "$TEMP_MOUNT"
+    exit 1
+fi
+
+# Create the marker file
+echo "Creating SSD marker file..."
+touch "$TEMP_MOUNT/.ssd"
+
+# Create the necessary directories
+echo "Creating directory structure..."
+mkdir -p "$TEMP_MOUNT/var/lib/rancher"
+mkdir -p "$TEMP_MOUNT/var/lib/kubelet"
+mkdir -p "$TEMP_MOUNT/var/lib/cni"
+
+# Unmount
+umount "$TEMP_MOUNT"
+rmdir "$TEMP_MOUNT"
+
+echo "SSD $SSD_DEVICE has been prepared for use with k3s."
+echo "It will be automatically detected on next boot."

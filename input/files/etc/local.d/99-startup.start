@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Use a subdirectory under /mnt for the temporary root mount
+mkdir -p /mnt/root
+
+mount -o ro /dev/root /mnt/root
+mkdir -p /root/.ssh/
+if [ ! -f /root/.ssh/authorized_keys ]; then
+  cp /mnt/root/etc/ssh/authorized_keys /root/.ssh/authorized_keys
+fi
+cp /mnt/root/etc/dropbear/dropbear.conf /etc/dropbear/dropbear.conf
+chmod 600 /root/.ssh/authorized_keys
+umount /mnt/root
+
+# SSD detection and mounting is now handled by the ssd-mount service
+# which runs before k3s starts

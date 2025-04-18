@@ -1,0 +1,11 @@
+SSD Usage with this k3s cluster:
+
+To use an SSD with this system:
+1. Attach your SSD to the Raspberry Pi
+2. Run the command: prepare-ssd /dev/sdXY (replace with your actual device)
+3. Reboot the system
+
+The system will automatically detect and mount the SSD on /mnt/ssd
+and use it for /var/lib to improve container performance.
+
+Only drives with a .ssd marker file will be used.
