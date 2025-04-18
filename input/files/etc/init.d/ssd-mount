@@ -2,27 +2,34 @@
 
 description="Detect and mount SSD for k3s storage"
 depend() {
-    need localmount
+    need localmount udev
     before k3s
 }
 
 start() {
     ebegin "Detecting and mounting SSD for k3s"
     
+    # Create log file if it doesn't exist
+    touch /var/log/ssd-mount.log
+    
     # Auto-detect and mount SSD
     mkdir -p /mnt/ssd
     DETECTED_SSD=""
+    
+    # Record the start time
+    echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Starting SSD detection" >> /var/log/ssd-mount.log
 
     # Look for potential SSDs (sda is typically the first SATA/USB drive)
     for ssd in /dev/sd*1; do
         if [ -b "$ssd" ]; then
+            echo "Checking device: $ssd" >> /var/log/ssd-mount.log
             # Check if it's a valid block device and not already mounted
             if ! mount | grep -q "$ssd"; then
                 # Try temporary mount to check for marker file
                 if mount "$ssd" /mnt/ssd; then
                     # Only use this SSD if it contains the marker file
                     if [ -f "/mnt/ssd/.ssd" ]; then
-                        echo "Valid SSD detected and mounted at /mnt/ssd: $ssd"
+                        echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Valid SSD detected and mounted at /mnt/ssd: $ssd" >> /var/log/ssd-mount.log
                         DETECTED_SSD="$ssd"
                         
                         # Create required directories on SSD
@@ -30,7 +37,7 @@ start() {
                         
                         # If this is the first boot with this SSD, migrate existing data
                         if [ ! -d "/mnt/ssd/var/lib/rancher" ] && [ -d "/var/lib/rancher" ]; then
-                            echo "Migrating existing data to SSD..."
+                            echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Migrating existing data to SSD..." >> /var/log/ssd-mount.log
                             mkdir -p /mnt/ssd/var/lib/rancher
                             cp -a /var/lib/rancher/* /mnt/ssd/var/lib/rancher/ 2>/dev/null || true
                         fi
@@ -41,23 +48,27 @@ start() {
                             mount | grep "/var/lib" | grep "bind" && umount /var/lib
                             # Bind mount from SSD
                             mount --bind /mnt/ssd/var/lib /var/lib
-                            echo "Using SSD for /var/lib"
+                            echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Using SSD for /var/lib" >> /var/log/ssd-mount.log
                         fi
                         
                         break
                     else
-                        echo "SSD found but missing .ssd marker file. Skipping: $ssd"
+                        echo "[$( date '+%Y-%m-%d %H:%M:%S' )] SSD found but missing .ssd marker file. Skipping: $ssd" >> /var/log/ssd-mount.log
                         # Unmount the SSD as we're not using it
                         umount /mnt/ssd
                     fi
+                else
+                    echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Could not mount $ssd" >> /var/log/ssd-mount.log
                 fi
+            else
+                echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Device $ssd is already mounted" >> /var/log/ssd-mount.log
             fi
         fi
     done
 
     # If no valid SSD was detected
     if [ -z "$DETECTED_SSD" ]; then
-        echo "No valid SSD detected, using default storage"
+        echo "[$( date '+%Y-%m-%d %H:%M:%S' )] No valid SSD detected, using default storage" >> /var/log/ssd-mount.log
         # Make sure the original bind mount for /var/lib is in place
         if ! mount | grep -q "/var/lib.*bind"; then
             mount --bind /data/var/lib /var/lib
@@ -69,6 +80,24 @@ start() {
 }
 
 stop() {
-    # Nothing to do on stop
+    # We don't unmount the SSD on stop to prevent data loss
+    # This is intentional as k3s will be writing to these directories
+    echo "[$( date '+%Y-%m-%d %H:%M:%S' )] SSD mount service stopped, mounts left intact" >> /var/log/ssd-mount.log
     return 0
+}
+
+restart() {
+    # Custom restart to handle hotplug events
+    echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Restart requested, likely due to hotplug event" >> /var/log/ssd-mount.log
+    
+    # We don't want to unmount if k3s is running
+    if /etc/init.d/k3s status > /dev/null; then
+        echo "[$( date '+%Y-%m-%d %H:%M:%S' )] K3s is running, skipping full restart" >> /var/log/ssd-mount.log
+        # Just try to find and mount any new drives
+        svc_start
+    else
+        # Safe to do a full restart
+        svc_stop
+        svc_start
+    fi
 }
