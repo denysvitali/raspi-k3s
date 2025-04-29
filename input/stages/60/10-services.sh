@@ -1,8 +1,5 @@
 #!/bin/sh
 
-# Copy files from the organized structure
-cp -r "${INPUT_PATH}"/files/* "${ROOTFS_PATH}"/
-
 # Make sure scripts are executable
 chmod 755 "${ROOTFS_PATH}"/etc/init.d/ssd-mount
 chmod 755 "${ROOTFS_PATH}"/etc/init.d/fs-rshared

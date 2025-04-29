@@ -30,7 +30,7 @@ jobs:
         run: echo "RELEASE_TAG=v$(date +'%Y-%m-%d')-${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
 
       - name: Set version
-        run: echo "$RELEASE_TAG" >> ./input/etc/raspi-k3s-version
+        run: echo "$RELEASE_TAG" >> ./input/files/etc/raspi-k3s-version
 
       - name: Run build script
         run: ./build_image.sh
