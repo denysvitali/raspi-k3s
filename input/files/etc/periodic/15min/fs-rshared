@@ -1,0 +1,11 @@
+#!/bin/sh
+# This script ensures the root filesystem is recursively shared
+# It runs periodically to maintain this state
+
+# Make the root filesystem recursively shared
+mount --make-rshared /
+
+# Log the action
+logger -t fs-rshared "Root filesystem set to recursively shared mode"
+
+exit 0

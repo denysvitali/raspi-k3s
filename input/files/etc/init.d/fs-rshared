@@ -1,0 +1,18 @@
+#!/sbin/openrc-run
+
+description="Make the root filesystem recursively shared"
+depend() {
+    need localmount
+    before k3s ssd-mount
+}
+
+start() {
+    ebegin "Making root filesystem recursively shared"
+    mount --make-rshared /
+    eend $?
+}
+
+# No need to undo this on stop
+stop() {
+    return 0
+}
