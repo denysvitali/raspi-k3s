@@ -25,12 +25,15 @@ jobs:
       - name: Get SSH keys from GitHub
         run: wget https://github.com/${{ github.repository_owner }}.keys -O ./input/config/authorized_keys
 
-      - name: Run build script
-        run: ./build_image.sh
-
       - name: Create tag
         id: create-tag
         run: echo "RELEASE_TAG=v$(date +'%Y-%m-%d')-${GITHUB_SHA:0:7}" >> "$GITHUB_ENV"
+
+      - name: Set version
+        run: echo "$RELEASE_TAG" >> ./input/etc/raspi-k3s-version
+
+      - name: Run build script
+        run: ./build_image.sh
         
       - name: Get version information
         id: get-versions
