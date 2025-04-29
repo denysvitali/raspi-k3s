@@ -1,5 +1,9 @@
 #!/bin/sh
 
+# Add edge repository
+echo "@edge-community http://dl-cdn.alpinelinux.org/alpine/edge/community" >> ${ROOTFS_PATH}/etc/apk/repositories
+
+
 # install deps and add services to runlevels
 chroot_exec apk add \
   --no-cache \
@@ -7,7 +11,7 @@ chroot_exec apk add \
   e2fsprogs \
   eudev \
   htop \
-  k3s \
+  k3s@edge-community \
   linux-firmware-brcm \
   openssh-sftp-server \
   python3 \
