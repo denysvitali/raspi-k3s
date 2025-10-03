@@ -1,0 +1,17 @@
+/var/log/messages
+/var/log/secure
+/var/log/maillog
+/var/log/cron
+/var/log/boot.log
+{
+    daily
+    rotate 7
+    missingok
+    notifempty
+    compress
+    delaycompress
+    sharedscripts
+    postrotate
+        /usr/bin/killall -HUP syslogd 2>/dev/null || true
+    endscript
+}

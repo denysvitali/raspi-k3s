@@ -13,6 +13,7 @@ chroot_exec apk add \
   htop \
   k3s@edge-community \
   linux-firmware-brcm \
+  logrotate \
   openssh-sftp-server \
   python3 \
   tailscale \
