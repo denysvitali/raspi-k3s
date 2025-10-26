@@ -11,26 +11,31 @@ The setup follows an A/B partition scheme (thanks to raspi-alpine/builder) to al
 
 - Raspberry Pi 4 (any RAM size)
 - SD card (min 8GB recommended, but at least `SIZE_ROOT_PART * 2 + SIZE_DATA`)
+- SSD drive (min 64GB recommended) for k3s data storage - must be prepared using `prepare-ssd /dev/sdX`
 - [raspi-alpine/builder](https://gitlab.com/raspi-alpine/builder/) dependency
 
 ## Quick Start
 
 1. Clone this repository
 2. Configure environment:
-    ```bash
-    cp .env.example .env
-    ```
-    Edit `.env` to set your WiFi credentials (`WIFI_SSID` and `WIFI_PSK`)
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Edit `.env` to set your WiFi credentials (`WIFI_SSID` and `WIFI_PSK`)
 
 3. Add SSH keys:
-    ```bash
-    ssh-add -L > input/config/authorized_keys
-    ```
+
+   ```bash
+   ssh-add -L > input/config/authorized_keys
+   ```
 
 4. Build image:
-    ```bash
-    ./build_image.sh
-    ```
+
+   ```bash
+   ./build_image.sh
+   ```
 
 5. Flash the resulting `output/sdcard.img` to your SD card
 
@@ -39,14 +44,15 @@ The setup follows an A/B partition scheme (thanks to raspi-alpine/builder) to al
 To update an existing installation:
 
 1. Transfer update image:
-    ```bash
-    scp output/sdcard_update.img.gz output/sdcard_update.img.gz.sha256 root@master:/tmp
-    ```
+
+   ```bash
+   scp output/sdcard_update.img.gz output/sdcard_update.img.gz.sha256 root@master:/tmp
+   ```
 
 2. Apply update on device:
-    ```bash
-    ab_flash /tmp/sdcard_update.img.gz && reboot
-    ```
+   ```bash
+   ab_flash /tmp/sdcard_update.img.gz && reboot
+   ```
 
 ## Security Notes
 
@@ -57,4 +63,3 @@ To update an existing installation:
 ## Support
 
 For issues and feature requests, please use the GitHub issue tracker.
-

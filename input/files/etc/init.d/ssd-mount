@@ -36,20 +36,24 @@ start() {
                         mkdir -p /mnt/ssd/var/lib
                         
                         # If this is the first boot with this SSD, migrate existing data
-                        if [ ! -d "/mnt/ssd/var/lib/rancher" ] && [ -d "/var/lib/rancher" ]; then
-                            echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Migrating existing data to SSD..." >> /var/log/ssd-mount.log
-                            mkdir -p /mnt/ssd/var/lib/rancher
-                            cp -a /var/lib/rancher/* /mnt/ssd/var/lib/rancher/ 2>/dev/null || true
-                        fi
+                        for dir in rancher kubelet cni; do
+                            if [ ! -d "/mnt/ssd/var/lib/$dir" ] && [ -d "/var/lib/$dir" ]; then
+                                echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Migrating /var/lib/$dir to SSD..." >> /var/log/ssd-mount.log
+                                mkdir -p "/mnt/ssd/var/lib/$dir"
+                                cp -a "/var/lib/$dir"/* "/mnt/ssd/var/lib/$dir"/ 2>/dev/null || true
+                            fi
+                        done
                         
-                        # Symlink or bind mount to use SSD for /var/lib
-                        if [ -d "/mnt/ssd/var/lib" ]; then
-                            # Unbind the current /var/lib binding if it exists
-                            mount | grep "/var/lib" | grep "bind" && umount /var/lib
-                            # Bind mount from SSD
-                            mount --bind /mnt/ssd/var/lib /var/lib
-                            echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Using SSD for /var/lib" >> /var/log/ssd-mount.log
-                        fi
+                        # Bind mount k3s directories to SSD
+                        for dir in rancher kubelet cni; do
+                            if [ -d "/mnt/ssd/var/lib/$dir" ]; then
+                                # Unbind any existing bind mount for this directory
+                                mount | grep "^/var/lib/$dir.*bind" | awk '{print $3}' | xargs -r umount
+                                # Bind mount from SSD
+                                mount --bind "/mnt/ssd/var/lib/$dir" "/var/lib/$dir"
+                                echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Using SSD for /var/lib/$dir" >> /var/log/ssd-mount.log
+                            fi
+                        done
                         
                         break
                     else
@@ -68,11 +72,9 @@ start() {
 
     # If no valid SSD was detected
     if [ -z "$DETECTED_SSD" ]; then
-        echo "[$( date '+%Y-%m-%d %H:%M:%S' )] No valid SSD detected, using default storage" >> /var/log/ssd-mount.log
-        # Make sure the original bind mount for /var/lib is in place
-        if ! mount | grep -q "/var/lib.*bind"; then
-            mount --bind /data/var/lib /var/lib
-        fi
+        echo "[$( date '+%Y-%m-%d %H:%M:%S' )] ERROR: No valid SSD detected - SSD storage is required for k3s" >> /var/log/ssd-mount.log
+        eend 1 "SSD storage required for k3s operation"
+        return 1
     fi
     
     eend 0
