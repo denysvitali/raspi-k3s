@@ -8,6 +8,7 @@ echo "@edge-community http://dl-cdn.alpinelinux.org/alpine/edge/community" >> ${
 chroot_exec apk add \
   --no-cache \
   dropbear-scp \
+  dua \
   e2fsprogs \
   eudev \
   htop \
