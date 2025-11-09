@@ -3,6 +3,7 @@
 # Make sure scripts are executable
 chmod 755 "${ROOTFS_PATH}"/etc/init.d/ssd-mount
 chmod 755 "${ROOTFS_PATH}"/etc/init.d/fs-rshared
+chmod 755 "${ROOTFS_PATH}"/etc/init.d/k3s
 chmod 755 "${ROOTFS_PATH}"/usr/local/bin/prepare-ssd
 chmod 755 "${ROOTFS_PATH}"/etc/local.d/99-startup.start
 chmod 755 "${ROOTFS_PATH}"/etc/periodic/15min/fs-rshared
