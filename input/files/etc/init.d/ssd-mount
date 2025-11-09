@@ -1,104 +1,173 @@
 #!/sbin/openrc-run
 
-description="Detect and mount SSD for k3s storage"
+description="Detect and mount SSD for k3s storage (including /var/log)"
+
+LOG_FILE="/var/log/ssd-mount.log"
+SSD_MOUNT="/mnt/ssd"
+SSD_MARKER=".ssd"
+
 depend() {
     need localmount udev
     before k3s
 }
 
+log() {
+    # Simple logger with timestamp into LOG_FILE
+    # Usage: log "message"
+    echo "[$( date '+%Y-%m-%d %H:%M:%S' )] $*" >> "$LOG_FILE"
+}
+
+migrate_if_empty() {
+    # migrate_if_empty <src> <dst_root>
+    # If src exists and dst_root exists and dst_root is empty, copy src/* into dst_root.
+    src="$1"
+    dst="$2"
+
+    if [ -d "$src" ] && [ -d "$dst" ] && [ -z "$(ls -A "$dst" 2>/dev/null)" ]; then
+        log "Migrating $src to $dst..."
+        cp -a "$src"/* "$dst"/ 2>/dev/null || true
+    fi
+}
+
+bind_mount() {
+    # bind_mount <src> <target> [umount_existing_flag]
+    src="$1"
+    target="$2"
+    umount_existing="${3:-yes}"
+
+    if [ -d "$src" ]; then
+        if [ "$umount_existing" = "yes" ]; then
+            # Best-effort unmount if something is already mounted there
+            mount | awk -v t="$target" '$3 == t {print $3}' | xargs -r umount || true
+        fi
+
+        if mount --bind "$src" "$target"; then
+            log "Bind-mounted $src -> $target"
+            return 0
+        else
+            log "ERROR: Failed to bind-mount $src -> $target"
+            return 1
+        fi
+    else
+        log "WARN: Cannot bind-mount, source directory missing: $src"
+        return 1
+    fi
+}
+
 start() {
     ebegin "Detecting and mounting SSD for k3s"
-    
-    # Create log file if it doesn't exist
-    touch /var/log/ssd-mount.log
-    
-    # Auto-detect and mount SSD
-    mkdir -p /mnt/ssd
-    DETECTED_SSD=""
-    
-    # Record the start time
-    echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Starting SSD detection" >> /var/log/ssd-mount.log
 
-    # Look for potential SSDs (sda is typically the first SATA/USB drive)
+    # Ensure log file and mountpoint exist
+    mkdir -p "$(dirname "$LOG_FILE")"
+    touch "$LOG_FILE"
+    mkdir -p "$SSD_MOUNT"
+
+    log "Starting SSD detection"
+
+    DETECTED_SSD=""
+
+    # Look for potential SSDs (/dev/sd*1 typical for first SATA/USB drive partition)
     for ssd in /dev/sd*1; do
-        if [ -b "$ssd" ]; then
-            echo "Checking device: $ssd" >> /var/log/ssd-mount.log
-            # Check if it's a valid block device and not already mounted
-            if ! mount | grep -q "$ssd"; then
-                # Try temporary mount to check for marker file
-                if mount "$ssd" /mnt/ssd; then
-                    # Only use this SSD if it contains the marker file
-                    if [ -f "/mnt/ssd/.ssd" ]; then
-                        echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Valid SSD detected and mounted at /mnt/ssd: $ssd" >> /var/log/ssd-mount.log
-                        DETECTED_SSD="$ssd"
-                        
-                        # Create required directories on SSD
-                        mkdir -p /mnt/ssd/var/lib
-                        
-                        # If this is the first boot with this SSD, migrate existing data
-                        for dir in rancher kubelet cni; do
-                            if [ ! -d "/mnt/ssd/var/lib/$dir" ] && [ -d "/var/lib/$dir" ]; then
-                                echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Migrating /var/lib/$dir to SSD..." >> /var/log/ssd-mount.log
-                                mkdir -p "/mnt/ssd/var/lib/$dir"
-                                cp -a "/var/lib/$dir"/* "/mnt/ssd/var/lib/$dir"/ 2>/dev/null || true
-                            fi
-                        done
-                        
-                        # Bind mount k3s directories to SSD
-                        for dir in rancher kubelet cni; do
-                            if [ -d "/mnt/ssd/var/lib/$dir" ]; then
-                                # Unbind any existing bind mount for this directory
-                                mount | grep "^/var/lib/$dir.*bind" | awk '{print $3}' | xargs -r umount
-                                # Bind mount from SSD
-                                mount --bind "/mnt/ssd/var/lib/$dir" "/var/lib/$dir"
-                                echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Using SSD for /var/lib/$dir" >> /var/log/ssd-mount.log
-                            fi
-                        done
-                        
-                        break
-                    else
-                        echo "[$( date '+%Y-%m-%d %H:%M:%S' )] SSD found but missing .ssd marker file. Skipping: $ssd" >> /var/log/ssd-mount.log
-                        # Unmount the SSD as we're not using it
-                        umount /mnt/ssd
-                    fi
-                else
-                    echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Could not mount $ssd" >> /var/log/ssd-mount.log
-                fi
+        if [ ! -b "$ssd" ]; then
+            continue
+        fi
+
+        log "Checking device: $ssd"
+
+        # Skip if already mounted
+        if mount | grep -q "^[^ ]\+ on $ssd "; then
+            log "Device $ssd appears to be mounted already, skipping"
+            continue
+        fi
+
+        # Try temporary mount to check for marker file
+        if mount "$ssd" "$SSD_MOUNT"; then
+            if [ -f "$SSD_MOUNT/$SSD_MARKER" ]; then
+                log "Valid SSD detected at $ssd, mounted on $SSD_MOUNT"
+                DETECTED_SSD="$ssd"
+                break
             else
-                echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Device $ssd is already mounted" >> /var/log/ssd-mount.log
+                log "SSD candidate $ssd missing marker $SSD_MARKER, skipping"
+                umount "$SSD_MOUNT" || true
             fi
+        else
+            log "ERROR: Could not mount $ssd on $SSD_MOUNT"
         fi
     done
 
-    # If no valid SSD was detected
     if [ -z "$DETECTED_SSD" ]; then
-        echo "[$( date '+%Y-%m-%d %H:%M:%S' )] ERROR: No valid SSD detected - SSD storage is required for k3s" >> /var/log/ssd-mount.log
+        log "ERROR: No valid SSD detected - SSD storage is required for k3s"
         eend 1 "SSD storage required for k3s operation"
         return 1
     fi
-    
+
+    # At this point, DETECTED_SSD is mounted on $SSD_MOUNT and contains $SSD_MARKER
+
+    # Ensure SSD directory structure
+    mkdir -p "$SSD_MOUNT/var/lib" \
+             "$SSD_MOUNT/var/log" \
+             "$SSD_MOUNT/data"
+
+    # Migrate key k3s dirs under /var/lib if not yet present on SSD
+    for dir in rancher kubelet cni; do
+        if [ ! -d "$SSD_MOUNT/var/lib/$dir" ] && [ -d "/var/lib/$dir" ]; then
+            log "Migrating /var/lib/$dir to SSD..."
+            mkdir -p "$SSD_MOUNT/var/lib/$dir"
+            cp -a "/var/lib/$dir"/* "$SSD_MOUNT/var/lib/$dir"/ 2>/dev/null || true
+        fi
+    done
+
+    # If /var/lib on SSD is still empty, migrate the rest of /var/lib
+    migrate_if_empty "/var/lib" "$SSD_MOUNT/var/lib"
+
+    # Migrate /data (if used) into SSD-backed /data on first boot
+    migrate_if_empty "/data" "$SSD_MOUNT/data"
+
+    # Migrate /var/log into SSD-backed /var/log on first boot
+    migrate_if_empty "/var/log" "$SSD_MOUNT/var/log"
+
+    # Bind mounts: define final runtime layout
+    # /var/lib -> SSD
+    bind_mount "$SSD_MOUNT/var/lib" "/var/lib"
+
+    # /data -> SSD (so all /data-based binds are SSD-backed)
+    bind_mount "$SSD_MOUNT/data" "/data"
+
+    # /var/log -> SSD
+    if ! bind_mount "$SSD_MOUNT/var/log" "/var/log"; then
+        log "ERROR: /mnt/ssd/var/log missing or bind failed; unmounting SSD and failing"
+        umount "$SSD_MOUNT" || true
+        DETECTED_SSD=""
+    fi
+
+    # Final validation: ensure we still consider the SSD valid
+    if [ -z "$DETECTED_SSD" ]; then
+        log "ERROR: SSD setup failed after detection; aborting"
+        eend 1 "SSD setup failed"
+        return 1
+    fi
+
+    log "SSD mount and bind configuration completed successfully"
     eend 0
     return 0
 }
 
 stop() {
-    # We don't unmount the SSD on stop to prevent data loss
-    # This is intentional as k3s will be writing to these directories
-    echo "[$( date '+%Y-%m-%d %H:%M:%S' )] SSD mount service stopped, mounts left intact" >> /var/log/ssd-mount.log
+    # We intentionally do not unmount the SSD on stop to prevent data loss
+    # while k3s and other services may still rely on it.
+    log "SSD mount service stopped, SSD-backed mounts left intact"
     return 0
 }
 
 restart() {
-    # Custom restart to handle hotplug events
-    echo "[$( date '+%Y-%m-%d %H:%M:%S' )] Restart requested, likely due to hotplug event" >> /var/log/ssd-mount.log
-    
-    # We don't want to unmount if k3s is running
-    if /etc/init.d/k3s status > /dev/null; then
-        echo "[$( date '+%Y-%m-%d %H:%M:%S' )] K3s is running, skipping full restart" >> /var/log/ssd-mount.log
-        # Just try to find and mount any new drives
+    log "Restart requested, likely due to hotplug or manual action"
+
+    # Avoid tearing down mounts if k3s is running
+    if /etc/init.d/k3s status > /dev/null 2>&1; then
+        log "K3s is running, performing safe restart (no unmount); re-running start logic"
         svc_start
     else
-        # Safe to do a full restart
+        log "K3s is not running, performing full restart"
         svc_stop
         svc_start
     fi
