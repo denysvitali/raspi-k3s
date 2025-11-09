@@ -15,6 +15,11 @@ chroot_exec rc-update add ssd-mount boot
 chroot_exec rc-update add fs-rshared boot
 chroot_exec rc-update add crond default
 
+# Disable busybox ntpd and enable chronyd
+chroot_exec rc-update del ntpd default 2>/dev/null || true
+chroot_exec rc-update del busybox-ntpd default 2>/dev/null || true
+chroot_exec rc-update add chronyd default
+
 # Create mount points
 mkdir -p "${ROOTFS_PATH}"/mnt/ssd
 mkdir -p "${ROOTFS_PATH}"/mnt/root

@@ -7,6 +7,7 @@ echo "@edge-community http://dl-cdn.alpinelinux.org/alpine/edge/community" >> ${
 # install deps and add services to runlevels
 chroot_exec apk add \
   --no-cache \
+  chrony \
   dropbear-scp \
   dua \
   e2fsprogs \
