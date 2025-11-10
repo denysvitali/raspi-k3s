@@ -31,9 +31,18 @@ chroot_exec rc-update add udev sysinit
 
 mkdir -p "${ROOTFS_PATH}"/etc/dropbear
 
-# Ensure CNI plugin path expected by k3s exists and contains flannel
-mkdir -p "${ROOTFS_PATH}"/opt/cni/bin
-# If flannel binary exists in its Alpine location, expose it where k3s looks for CNI plugins
-if [ -x "${ROOTFS_PATH}"/usr/libexec/cni/flannel ] && [ ! -e "${ROOTFS_PATH}"/opt/cni/bin/flannel ]; then
-  ln -s /usr/libexec/cni/flannel "${ROOTFS_PATH}"/opt/cni/bin/flannel
+# Ensure CNI plugin path expected by k3s exists and mirrors /usr/libexec/cni
+if [ -d "${ROOTFS_PATH}"/usr/libexec/cni ]; then
+  # Create parent directory for the CNI bin path
+  mkdir -p "${ROOTFS_PATH}"/opt/cni
+
+  # If /opt/cni/bin already exists and is not a symlink, remove it to avoid conflicts
+  if [ -e "${ROOTFS_PATH}"/opt/cni/bin ] && [ ! -L "${ROOTFS_PATH}"/opt/cni/bin ]; then
+    rm -rf "${ROOTFS_PATH}"/opt/cni/bin
+  fi
+
+  # Create a symlink so /opt/cni/bin contains the same plugins as /usr/libexec/cni
+  if [ ! -e "${ROOTFS_PATH}"/opt/cni/bin ]; then
+    ln -s /usr/libexec/cni "${ROOTFS_PATH}"/opt/cni/bin
+  fi
 fi
